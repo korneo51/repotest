@@ -1,3 +1,4 @@
+import { GAME_VERSION } from "../data/constants.js";
 import { CATS } from "../data/profiles.js";
 import { C, CAT_C } from "../theme/colors.js";
 import Button from "./Button.jsx";
@@ -39,11 +40,12 @@ export default function MenuScreen({ onStart }) {
           color: C.gold,
           letterSpacing: 8,
           fontWeight: 600,
-          marginBottom: 24,
+          marginBottom: 6,
         }}
       >
         TYCOON
       </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.dim, letterSpacing: 2, marginBottom: 24 }}>v{GAME_VERSION}</div>
       <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
         {CATS.map((cat) => (
           <div key={cat} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>

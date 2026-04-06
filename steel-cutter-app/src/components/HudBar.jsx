@@ -1,7 +1,7 @@
 import { SAWS } from "../data/saws.js";
 import { C } from "../theme/colors.js";
 
-export default function HudBar({ day, money, rep, cutsToday, sawLv }) {
+export default function HudBar({ day, money, rep, cutsToday, sawLv, gameVersion }) {
   return (
     <div
       style={{
@@ -28,6 +28,9 @@ export default function HudBar({ day, money, rep, cutsToday, sawLv }) {
         >
           J{day}
         </span>
+        {gameVersion && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.dim, letterSpacing: 1 }}>v{gameVersion}</span>
+        )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: C.green, fontFamily: "'Fira Code',monospace" }}>

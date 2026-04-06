@@ -18,6 +18,7 @@ export default function OptionsModal({ g }) {
     setCheatAmt,
     setMoney,
     notify,
+    gameVersion,
   } = g;
   return (
     <div>
@@ -63,6 +64,7 @@ export default function OptionsModal({ g }) {
       <div style={{ background: C.card, borderRadius: 12, padding: 14, border: "1px solid " + C.border }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>📊 Stats</div>
         {[
+          ["Version", "v" + gameVersion],
           ["Jour", day],
           ["Argent", money + "€"],
           ["Réputation", "★" + rep],

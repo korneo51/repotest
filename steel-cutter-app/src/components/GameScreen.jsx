@@ -22,7 +22,14 @@ export default function GameScreen({ g }) {
       }}
     >
       <FontsLink />
-      <HudBar day={g.day} money={g.money} rep={g.rep} cutsToday={g.cutsToday} sawLv={g.sawLv} />
+      <HudBar
+        day={g.day}
+        money={g.money}
+        rep={g.rep}
+        cutsToday={g.cutsToday}
+        sawLv={g.sawLv}
+        gameVersion={g.gameVersion}
+      />
       <ActionBar
         pendingCount={g.pendingOrders.length}
         onIncoming={() => g.setModal("incoming")}
@@ -50,6 +57,7 @@ export default function GameScreen({ g }) {
         drag={g.drag}
         handlePD={g.handlePD}
         shipOrder={g.shipOrder}
+        now={g.now}
       />
       <BarsPanel
         bars={g.bars}

@@ -2,6 +2,8 @@
 
 Prototype de jeu de gestion publié sur GitHub Pages.
 
+**v0.2** : déblocage des profilés par réputation ★, missions urgentes avec timer, gains ajustés, meilleure revente des chutes.
+
 ## Liens
 - Jeu en ligne : `https://korneo51.github.io/repotest/`
 - Code source : `steel-cutter-app/`

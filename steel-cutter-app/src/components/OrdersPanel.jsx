@@ -1,6 +1,7 @@
 import { PM } from "../data/profiles.js";
 import { C } from "../theme/colors.js";
 import { tap } from "../theme/ui.js";
+import { formatUrgentCountdown } from "../game/urgentUi.js";
 import Button from "./Button.jsx";
 import ProfileIcon from "./ProfileIcon.jsx";
 
@@ -15,6 +16,7 @@ export default function OrdersPanel({
   drag,
   handlePD,
   shipOrder,
+  now,
 }) {
   return (
     <div style={{ flexShrink: 0, borderBottom: "1px solid " + C.border, background: C.surface }}>
@@ -31,6 +33,9 @@ export default function OrdersPanel({
             const ready = isReady(order);
             const planned = isPlanned(order);
             const loy = clientH[order.client] || 0;
+            const urgent = order.isUrgent && order.expiresAt != null;
+            const left = urgent ? formatUrgentCountdown(order.expiresAt, now) : "";
+            const lowUrgent = urgent && order.expiresAt - now < 25_000;
             return (
               <div
                 key={order.id}
@@ -40,19 +45,48 @@ export default function OrdersPanel({
                   flexShrink: 0,
                   background: C.card,
                   borderRadius: 12,
-                  border: "1px solid " + (ready ? C.green + "44" : planned ? C.gold + "44" : C.border),
+                  border:
+                    "1px solid " +
+                    (ready ? C.green + "44" : urgent ? C.red + "55" : planned ? C.gold + "44" : C.border),
                   padding: "8px 10px",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
                     <div style={{ width: 3, height: 22, borderRadius: 2, background: ready ? C.green : order.color }} />
                     <span style={{ fontWeight: 700, fontSize: 14, color: ready ? C.green : order.color }}>{order.client}</span>
                     {loy > 0 && <span style={{ fontSize: 9, color: C.gold }}>🤝{loy}</span>}
+                    {urgent && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: C.red,
+                          background: C.red + "18",
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        URGENT
+                      </span>
+                    )}
                   </div>
-                  <span style={{ fontSize: 10, color: order.daysLeft <= 1 ? C.red : C.dim, fontWeight: 700 }}>
-                    {order.daysLeft}j
-                  </span>
+                  {urgent ? (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: lowUrgent ? C.red : C.orange,
+                        fontWeight: 700,
+                        fontFamily: "'Fira Code',monospace",
+                      }}
+                    >
+                      ⏱{left}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 10, color: order.daysLeft <= 1 ? C.red : C.dim, fontWeight: 700 }}>
+                      {order.daysLeft}j
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
                   {order.pieces.map((p, idx) => {

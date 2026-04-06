@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SCRAP_PRICE, WELD_LOSS } from "../data/constants.js";
+import {
+  GAME_VERSION,
+  SCRAP_PRICE,
+  SCRAP_REMNANT_MULT,
+  URGENT_REP_LOSS_ACCEPTED,
+  URGENT_REP_LOSS_PENDING,
+  WELD_LOSS,
+} from "../data/constants.js";
 import { LENGTHS } from "../data/lengths.js";
 import { PM } from "../data/profiles.js";
 import { SAWS } from "../data/saws.js";
@@ -8,6 +15,7 @@ import { SUP_LV } from "../data/supplier.js";
 import { canFitPiece, getUsed, getUsedForAdd } from "./barMath.js";
 import { genOrders } from "./genOrders.js";
 import { uid } from "./ids.js";
+import { isProfileUnlocked } from "./progression.js";
 
 export function useSteelGame() {
   const [scr, setScr] = useState("menu");
@@ -37,11 +45,15 @@ export function useSteelGame() {
   const [collapsed, setCollapsed] = useState({});
   const [weldSel, setWeldSel] = useState([]);
   const [cheatAmt, setCheatAmt] = useState("");
+  const [now, setNow] = useState(() => Date.now());
 
   const barElRefs = useRef({});
+  const ordersRef = useRef([]);
   const tRef = useRef(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
+
+  ordersRef.current = orders;
 
   const sw = SAWS[sawLv].w;
   const maxB = STOS[stoLv].m;
@@ -117,11 +129,13 @@ export function useSteelGame() {
   const getScrapVal = useCallback((bar) => {
     const prof = PM[bar.profileId];
     if (!prof) return 0;
-    return Math.round(prof.kgm * (bar.remaining / 1000) * SCRAP_PRICE * 100) / 100;
+    const mult = bar.isRemnant ? SCRAP_REMNANT_MULT : 1;
+    return Math.round(prof.kgm * (bar.remaining / 1000) * SCRAP_PRICE * mult * 100) / 100;
   }, []);
 
   const buyBar = useCallback(
     (profId, len) => {
+      if (!isProfileUnlocked(profId, rep)) return notify("Profilé verrouillé — gagnez des ★", "error");
       const price = getPrice(profId, len);
       if (money < price) return notify("Pas assez d'argent !", "error");
       if (bars.length >= maxB) return notify("Stockage plein !", "error");
@@ -131,7 +145,7 @@ export function useSteelGame() {
       setMoney((m) => m - price);
       notify(PM[profId].label + " " + len + "mm — " + price + "€");
     },
-    [money, bars.length, maxB, getPrice, notify],
+    [money, bars.length, maxB, rep, getPrice, notify],
   );
 
   const scrapBar = useCallback(
@@ -313,6 +327,17 @@ export function useSteelGame() {
   const endDay = useCallback(() => {
     const log = [];
     const na = { ...asgn };
+    let repHit = 0;
+
+    const pendingUrgent = orders.filter((o) => !o.accepted && o.isUrgent);
+    if (pendingUrgent.length > 0) {
+      repHit += pendingUrgent.length * URGENT_REP_LOSS_PENDING;
+      log.push({
+        t: "⏱ Urgentes non acceptées (fin de journée) : -" + pendingUrgent.length * URGENT_REP_LOSS_PENDING + "★",
+        ty: "warn",
+      });
+    }
+
     const maint = SAWS[sawLv].daily + STOS[stoLv].daily;
     if (maint > 0) {
       log.push({ t: "🔧 Maintenance : -" + maint + "€", ty: "warn" });
@@ -321,9 +346,10 @@ export function useSteelGame() {
     const remaining = orders
       .filter((o) => {
         if (!o.accepted) return false;
+        if (o.isUrgent) return true;
         if (o.daysLeft <= 1) {
           log.push({ t: "✗ " + o.client + " expirée !", ty: "error" });
-          setRep((r) => Math.max(0, r - 3));
+          repHit += 3;
           Object.keys(na).forEach((bId) => {
             na[bId] = (na[bId] || []).filter((a) => a.orderId !== o.id);
           });
@@ -331,7 +357,10 @@ export function useSteelGame() {
         }
         return true;
       })
-      .map((o) => ({ ...o, daysLeft: o.daysLeft - 1 }));
+      .map((o) => (o.isUrgent ? o : { ...o, daysLeft: o.daysLeft - 1 }));
+
+    if (repHit > 0) setRep((r) => Math.max(0, r - repHit));
+
     setAsgn(na);
     setCutsToday(0);
     const nd = day + 1;
@@ -340,6 +369,40 @@ export function useSteelGame() {
     setDayLog(log);
     if (log.length > 0) setModal("summary");
   }, [asgn, orders, sawLv, stoLv, day, rep, clientH]);
+
+  useEffect(() => {
+    if (scr !== "play") return;
+    const id = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      const prev = ordersRef.current;
+      const expired = prev.filter((o) => o.isUrgent && o.expiresAt != null && t > o.expiresAt);
+      if (expired.length === 0) return;
+      const idSet = new Set(expired.map((o) => o.id));
+      const loss = expired.reduce(
+        (s, o) => s + (o.accepted ? URGENT_REP_LOSS_ACCEPTED : URGENT_REP_LOSS_PENDING),
+        0,
+      );
+      setRep((r) => Math.max(0, r - loss));
+      setAsgn((na) => {
+        const n = { ...na };
+        for (const oid of idSet) {
+          for (const bId of Object.keys(n)) {
+            n[bId] = (n[bId] || []).filter((a) => a.orderId !== oid);
+          }
+        }
+        return n;
+      });
+      setOrders((o) => o.filter((x) => !idSet.has(x.id)));
+      notify(
+        expired.length === 1
+          ? `⏱ Urgent expirée (-${expired[0].accepted ? URGENT_REP_LOSS_ACCEPTED : URGENT_REP_LOSS_PENDING}★)`
+          : `⏱ ${expired.length} urgentes expirées (-${loss}★)`,
+        "error",
+      );
+    }, 1000);
+    return () => clearInterval(id);
+  }, [scr, notify]);
 
   const handlePD = useCallback((e, oId, pIdx, piece, oCol) => {
     e.preventDefault();
@@ -423,6 +486,9 @@ export function useSteelGame() {
 
   return {
     scr,
+    gameVersion: GAME_VERSION,
+    now,
+    isProfileUnlocked,
     day,
     money,
     rep,

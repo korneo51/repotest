@@ -32,8 +32,6 @@ export default function GameScreen({ g }) {
         gameVersion={g.gameVersion}
       />
       <ActionBar
-        pendingCount={g.pendingOrders.length}
-        onIncoming={() => g.setModal("incoming")}
         onShop={() => g.setModal("shop")}
         onStock={() => g.setModal("stock")}
         onUpgrades={() => g.setModal("upgrades")}
@@ -49,6 +47,7 @@ export default function GameScreen({ g }) {
       />
       <OrdersPanel
         activeOrders={g.activeOrders}
+        pendingOrders={g.pendingOrders}
         clientH={g.clientH}
         getFulP={g.getFulP}
         getFulD={g.getFulD}
@@ -58,6 +57,8 @@ export default function GameScreen({ g }) {
         drag={g.drag}
         handlePD={g.handlePD}
         shipOrder={g.shipOrder}
+        acceptOrder={g.acceptOrder}
+        declineOrder={g.declineOrder}
         now={g.now}
       />
       <BarsPanel

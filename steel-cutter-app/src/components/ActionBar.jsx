@@ -1,11 +1,12 @@
 import { C } from "../theme/colors.js";
 import { tap } from "../theme/ui.js";
 
-export default function ActionBar({ onShop, onStock, onUpgrades, onOptions, onEndDay }) {
+export default function ActionBar({ onShop, onStock, onUpgrades, onOptions, onLeaderboard, onEndDay }) {
   const items = [
     { l: "🏪", a: onShop, c: C.gold },
     { l: "📦", a: onStock, c: C.orange },
     { l: "⚙", a: onUpgrades, c: C.purple },
+    { l: "🏆", a: onLeaderboard, c: C.accent },
     { l: "⚡", a: onOptions, c: C.dim },
     { l: "▶ Jour suiv.", a: onEndDay, c: C.green },
   ];

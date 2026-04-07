@@ -1,3 +1,4 @@
+import LeaderboardModal from "./LeaderboardModal.jsx";
 import ModalShell from "./ModalShell.jsx";
 import OptionsModal from "./OptionsModal.jsx";
 import ShopModal from "./ShopModal.jsx";
@@ -14,6 +15,7 @@ export default function GameModals({ g }) {
       {g.modal === "stock" && <StockModal g={g} />}
       {g.modal === "upgrades" && <UpgradesModal g={g} />}
       {g.modal === "summary" && <SummaryModal g={g} />}
+      {g.modal === "leaderboard" && <LeaderboardModal player={g.player} />}
     </ModalShell>
   );
 }

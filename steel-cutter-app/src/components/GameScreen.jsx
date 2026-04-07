@@ -35,6 +35,7 @@ export default function GameScreen({ g }) {
         onShop={() => g.setModal("shop")}
         onStock={() => g.setModal("stock")}
         onUpgrades={() => g.setModal("upgrades")}
+        onLeaderboard={() => g.setModal("leaderboard")}
         onOptions={() => g.setModal("options")}
         onEndDay={g.endDay}
       />

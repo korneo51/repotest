@@ -14,9 +14,19 @@ import { genOrders } from "./genOrders.js";
 import { uid } from "./ids.js";
 import { buyPriceRounded, scrapValueRounded } from "./pricing.js";
 import { isProfileUnlocked } from "./progression.js";
+import { uploadSave } from "../lib/api.js";
 
 export function useSteelGame() {
-  const [scr, setScr] = useState("menu");
+  // Récupère la session persistée (localStorage) au démarrage
+  const [player, setPlayerState] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("sc_player")) || null; }
+    catch { return null; }
+  });
+  // Sauvegarde distante chargée au login (hasSave + données si déjà joueur)
+  const [remoteSave, setRemoteSave] = useState(null);
+  const [scr, setScr] = useState(() =>
+    localStorage.getItem("sc_player") ? "menu" : "login"
+  );
   const [day, setDay] = useState(1);
   const [money, setMoney] = useState(800);
   const [rep, setRep] = useState(0);
@@ -51,8 +61,11 @@ export function useSteelGame() {
   const tRef = useRef(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
+  // Ref toujours à jour pour l'autosave (évite les closures périmées)
+  const saveStateRef = useRef({});
 
   ordersRef.current = orders;
+  saveStateRef.current = { day, money, rep, sawLv, stoLv, supLv, hasWelder, bars, asgn, orders, clientH, cutsToday };
 
   const sw = SAWS[sawLv].w;
   const maxB = STOS[stoLv].m;
@@ -64,6 +77,42 @@ export function useSteelGame() {
     clearTimeout(tRef.current);
     setToast({ msg, type });
     tRef.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+
+  /** Appelé après un login réussi : stocke le joueur et avance vers le menu */
+  const setPlayer = useCallback((playerObj) => {
+    setPlayerState(playerObj);
+    setRemoteSave(playerObj.hasSave ? playerObj : null);
+    setScr("menu");
+  }, []);
+
+  /** Restaure une partie sauvegardée reçue de l'API */
+  const loadSave = useCallback((saveData) => {
+    if (!saveData) return;
+    setDay(saveData.day ?? 1);
+    setMoney(saveData.money ?? 1000);
+    setRep(saveData.rep ?? 0);
+    setSawLv(saveData.sawLv ?? 0);
+    setStoLv(saveData.stoLv ?? 0);
+    setSupLv(saveData.supLv ?? 0);
+    setHasWelder(saveData.hasWelder ?? false);
+    setBars(saveData.bars ?? []);
+    setAsgn(saveData.asgn ?? {});
+    setOrders(saveData.orders ?? []);
+    setClientH(saveData.clientH ?? {});
+    setCutsToday(saveData.cutsToday ?? 0);
+    setCollapsed({});
+    setWeldSel([]);
+    setModal(null);
+    setScr("play");
+  }, []);
+
+  /** Déconnecte le joueur et revient à l'écran de login */
+  const logout = useCallback(() => {
+    localStorage.removeItem("sc_player");
+    setPlayerState(null);
+    setRemoteSave(null);
+    setScr("login");
   }, []);
 
   const startGame = useCallback(() => {
@@ -395,6 +444,15 @@ export function useSteelGame() {
     if (log.length > 0) setModal("summary");
   }, [asgn, orders, sawLv, stoLv, day, rep, clientH]);
 
+  // Autosave : déclenché chaque fois que le jour avance (après endDay)
+  const prevDayRef = useRef(0);
+  useEffect(() => {
+    if (scr !== "play" || !player || day <= 1 || day === prevDayRef.current) return;
+    prevDayRef.current = day;
+    const s = saveStateRef.current;
+    uploadSave(player.id, s, { rep: s.rep, day: s.day, money: s.money, pseudo: player.pseudo }).catch(() => {});
+  }, [day, scr, player]);
+
   useEffect(() => {
     if (scr !== "play") return;
     const id = setInterval(() => {
@@ -511,6 +569,11 @@ export function useSteelGame() {
 
   return {
     scr,
+    player,
+    remoteSave,
+    setPlayer,
+    loadSave,
+    logout,
     gameVersion: GAME_VERSION,
     now,
     isProfileUnlocked,

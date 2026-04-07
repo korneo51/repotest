@@ -1,14 +1,13 @@
 import { C } from "../theme/colors.js";
 import { tap } from "../theme/ui.js";
 
-export default function ActionBar({ pendingCount, onIncoming, onShop, onStock, onUpgrades, onOptions, onEndDay }) {
+export default function ActionBar({ onShop, onStock, onUpgrades, onOptions, onEndDay }) {
   const items = [
-    { l: "📋", a: onIncoming, b: pendingCount, c: C.accent },
-    { l: "🏪", a: onShop, b: 0, c: C.gold },
-    { l: "📦", a: onStock, b: 0, c: C.orange },
-    { l: "⚙", a: onUpgrades, b: 0, c: C.purple },
-    { l: "⚡", a: onOptions, b: 0, c: C.dim },
-    { l: "▶ Jour suiv.", a: onEndDay, b: 0, c: C.green },
+    { l: "🏪", a: onShop, c: C.gold },
+    { l: "📦", a: onStock, c: C.orange },
+    { l: "⚙", a: onUpgrades, c: C.purple },
+    { l: "⚡", a: onOptions, c: C.dim },
+    { l: "▶ Jour suiv.", a: onEndDay, c: C.green },
   ];
   return (
     <div
@@ -37,34 +36,11 @@ export default function ActionBar({ pendingCount, onIncoming, onShop, onStock, o
             border: "1px solid " + b.c + "25",
             cursor: "pointer",
             minHeight: 32,
-            position: "relative",
             fontFamily: "'Chakra Petch',sans-serif",
             ...tap,
           }}
         >
           {b.l}
-          {b.b > 0 && (
-            <span
-              style={{
-                position: "absolute",
-                top: -4,
-                right: -4,
-                width: 16,
-                height: 16,
-                borderRadius: "50%",
-                background: C.red,
-                color: "#fff",
-                fontSize: 9,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                animation: "pulse 1.5s infinite",
-              }}
-            >
-              {b.b}
-            </span>
-          )}
         </button>
       ))}
     </div>

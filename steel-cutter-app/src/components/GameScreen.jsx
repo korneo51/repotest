@@ -3,6 +3,7 @@ import ActionBar from "./ActionBar.jsx";
 import BarsPanel from "./BarsPanel.jsx";
 import FontsLink from "./FontsLink.jsx";
 import HudBar from "./HudBar.jsx";
+import CuttingMiniGame from "./modals/CuttingMiniGame.jsx";
 import GameModals from "./modals/GameModals.jsx";
 import OrdersPanel from "./OrdersPanel.jsx";
 import ToastAndDragOverlay from "./ToastAndDragOverlay.jsx";
@@ -31,8 +32,6 @@ export default function GameScreen({ g }) {
         gameVersion={g.gameVersion}
       />
       <ActionBar
-        pendingCount={g.pendingOrders.length}
-        onIncoming={() => g.setModal("incoming")}
         onShop={() => g.setModal("shop")}
         onStock={() => g.setModal("stock")}
         onUpgrades={() => g.setModal("upgrades")}
@@ -48,6 +47,7 @@ export default function GameScreen({ g }) {
       />
       <OrdersPanel
         activeOrders={g.activeOrders}
+        pendingOrders={g.pendingOrders}
         clientH={g.clientH}
         getFulP={g.getFulP}
         getFulD={g.getFulD}
@@ -57,6 +57,8 @@ export default function GameScreen({ g }) {
         drag={g.drag}
         handlePD={g.handlePD}
         shipOrder={g.shipOrder}
+        acceptOrder={g.acceptOrder}
+        declineOrder={g.declineOrder}
         now={g.now}
       />
       <BarsPanel
@@ -83,6 +85,13 @@ export default function GameScreen({ g }) {
         getScrapVal={g.getScrapVal}
       />
       <GameModals g={g} />
+      {g.miniGame && (
+        <CuttingMiniGame
+          miniGame={g.miniGame}
+          sawLv={g.sawLv}
+          onComplete={g.executeCut}
+        />
+      )}
     </div>
   );
 }

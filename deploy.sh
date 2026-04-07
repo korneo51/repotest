@@ -24,13 +24,13 @@ $SSH "chmod 755 ${WEB_DIR} ${WEB_DIR}/assets 2>/dev/null || true; find ${WEB_DIR
 
 echo "==> Envoi de l'API…"
 $SSH "mkdir -p ${APP_DIR}/api ${APP_DIR}/data"
-rsync -av --delete --exclude node_modules ../api/ "root@${LXC_IP}:${APP_DIR}/api/"
+rsync -av --delete --exclude node_modules --exclude data ../api/ "root@${LXC_IP}:${APP_DIR}/api/"
 
 echo "==> Installation des dépendances Node.js…"
 $SSH "cd ${APP_DIR}/api && npm install --omit=dev"
 
 echo "==> (Re)démarrage de l'API avec pm2 (NODE_ENV=production + JWT_SECRET)…"
-$SSH "cd ${APP_DIR}/api && (test -f .jwt_secret && grep -q '^JWT_SECRET=' .jwt_secret || printf 'JWT_SECRET=%s\\n' \"\$(openssl rand -hex 32)\" > .jwt_secret) && set -a && . ./.jwt_secret && set +a && export NODE_ENV=production && pm2 delete steelcutter-api 2>/dev/null || true; pm2 start ${APP_DIR}/api/server.js --name steelcutter-api --cwd ${APP_DIR}/api && pm2 save"
+$SSH "cd ${APP_DIR}/api && (test -f .jwt_secret && grep -q '^JWT_SECRET=' .jwt_secret || printf 'JWT_SECRET=%s\\n' \"\$(openssl rand -hex 32)\" > .jwt_secret) && set -a && . ./.jwt_secret && set +a && export NODE_ENV=production && export DATA_DIR=${APP_DIR}/data && pm2 delete steelcutter-api 2>/dev/null || true; pm2 start ${APP_DIR}/api/server.js --name steelcutter-api --cwd ${APP_DIR}/api && pm2 save"
 
 echo "==> Configuration nginx…"
 rsync -av ../nginx/steelcutter.conf "root@${LXC_IP}:/etc/nginx/sites-available/steelcutter"

@@ -250,7 +250,7 @@ export default function BarsPanel({
                                     ...tap,
                                   }}
                                 >
-                                  ♻{Math.round(getScrapVal(bar))}€
+                                  ♻{getScrapVal(bar)}€
                                 </button>
                               )}
                             </div>

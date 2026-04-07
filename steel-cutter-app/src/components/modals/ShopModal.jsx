@@ -1,5 +1,6 @@
 import { LENGTHS } from "../../data/lengths.js";
 import { CATS, PM, PROFILES } from "../../data/profiles.js";
+import { listPriceRounded } from "../../game/pricing.js";
 import { C, CAT_C } from "../../theme/colors.js";
 import { tap } from "../../theme/ui.js";
 import ProfileIcon from "../ProfileIcon.jsx";
@@ -81,7 +82,7 @@ export default function ShopModal({ g }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
         {LENGTHS.map((l) => {
           const price = getPrice(shopProf, l.l);
-          const full = Math.round(l.bp * (PM[shopProf]?.pm || 1));
+          const full = listPriceRounded(shopProf, l.l);
           const profOk = isProfileUnlocked(shopProf, rep);
           const cant = !profOk || money < price || bars.length >= maxB;
           return (

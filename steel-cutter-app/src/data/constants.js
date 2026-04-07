@@ -1,12 +1,16 @@
 export const MAX_BAR = 6000;
-/** Prix au kg pour la ferraille (revente chutes) — augmenté en 0.2 */
-export const SCRAP_PRICE = 0.22;
-/** Bonus revente pour les chutes (isRemnant) */
-export const SCRAP_REMNANT_MULT = 1.15;
 export const WELD_COST = 18000;
 export const WELD_LOSS = 25;
 
 export const GAME_VERSION = "0.2";
+
+/**
+ * Part du « prix matière neuf » (€/kg du profilé) reprise à la ferraille.
+ * Cohérent avec un rachat ferraille bien inférieur au prix neuf détail.
+ */
+export const SCRAP_VALUE_RATIO = 0.14;
+/** Légère prime pour les chutes (déjà coupées / triées) */
+export const SCRAP_REMNANT_MULT = 1.12;
 
 /** Multiplicateur de récompense de commande (base plus basse qu’en 0.1) */
 export const REWARD_BASE = 0.034;

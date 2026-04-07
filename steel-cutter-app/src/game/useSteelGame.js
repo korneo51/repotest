@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GAME_VERSION,
-  SCRAP_PRICE,
-  SCRAP_REMNANT_MULT,
   URGENT_REP_LOSS_ACCEPTED,
   URGENT_REP_LOSS_PENDING,
   WELD_LOSS,
 } from "../data/constants.js";
-import { LENGTHS } from "../data/lengths.js";
 import { PM } from "../data/profiles.js";
 import { SAWS } from "../data/saws.js";
 import { STOS } from "../data/storage.js";
@@ -15,6 +12,7 @@ import { SUP_LV } from "../data/supplier.js";
 import { canFitPiece, getUsed, getUsedForAdd } from "./barMath.js";
 import { genOrders } from "./genOrders.js";
 import { uid } from "./ids.js";
+import { buyPriceRounded, scrapValueRounded } from "./pricing.js";
 import { isProfileUnlocked } from "./progression.js";
 
 export function useSteelGame() {
@@ -116,22 +114,9 @@ export function useSteelGame() {
   const isReady = useCallback((order) => getFulD(order).every((f) => f.done >= f.needed), [getFulD]);
   const isPlanned = useCallback((order) => getFulP(order).every((f) => f.done >= f.needed), [getFulP]);
 
-  const getPrice = useCallback(
-    (profId, len) => {
-      const prof = PM[profId];
-      const base = LENGTHS.find((l) => l.l === len);
-      if (!prof || !base) return 999;
-      return Math.round(base.bp * prof.pm * (1 - disc / 100));
-    },
-    [disc],
-  );
+  const getPrice = useCallback((profId, len) => buyPriceRounded(profId, len, disc), [disc]);
 
-  const getScrapVal = useCallback((bar) => {
-    const prof = PM[bar.profileId];
-    if (!prof) return 0;
-    const mult = bar.isRemnant ? SCRAP_REMNANT_MULT : 1;
-    return Math.round(prof.kgm * (bar.remaining / 1000) * SCRAP_PRICE * mult * 100) / 100;
-  }, []);
+  const getScrapVal = useCallback((bar) => scrapValueRounded(bar), []);
 
   const buyBar = useCallback(
     (profId, len) => {
@@ -153,7 +138,7 @@ export function useSteelGame() {
       const bar = bars.find((b) => b.id === barId);
       if (!bar) return;
       if ((asgn[barId] || []).length > 0) return notify("Retirez les pièces !", "error");
-      const val = Math.round(getScrapVal(bar));
+      const val = getScrapVal(bar);
       setBars((p) => p.filter((b) => b.id !== barId));
       setAsgn((p) => {
         const n = { ...p };
@@ -208,11 +193,22 @@ export function useSteelGame() {
         notify("Toutes placées !", "error");
         return false;
       }
+      const remainingQty = piece.qty - already;
+      const nextAssigns = [...ba];
+      let placed = 0;
+      while (placed < remainingQty && canFitPiece(nextAssigns, piece.length, bar.remaining, sw)) {
+        nextAssigns.push({ length: piece.length });
+        placed += 1;
+      }
+      if (placed === 0) {
+        notify("Pas assez de place !", "error");
+        return false;
+      }
       setAsgn((p) => ({
         ...p,
         [barId]: [
           ...(p[barId] || []),
-          {
+          ...Array.from({ length: placed }, () => ({
             id: uid(),
             orderId,
             pieceIdx,
@@ -221,9 +217,10 @@ export function useSteelGame() {
             client: order.client,
             profileId: piece.profileId,
             debited: false,
-          },
+          })),
         ],
       }));
+      if (placed > 1) notify(`${placed} longueurs de ${piece.length}mm placées`, "success");
       return true;
     },
     [orders, bars, asgn, sw, notify],

@@ -43,6 +43,7 @@ export function useSteelGame() {
   const [collapsed, setCollapsed] = useState({});
   const [weldSel, setWeldSel] = useState([]);
   const [cheatAmt, setCheatAmt] = useState("");
+  const [miniGame, setMiniGame] = useState(null); // { barId, numCuts, fee }
   const [now, setNow] = useState(() => Date.now());
 
   const barElRefs = useRef({});
@@ -67,7 +68,7 @@ export function useSteelGame() {
 
   const startGame = useCallback(() => {
     setDay(1);
-    setMoney(800);
+    setMoney(1000);
     setRep(0);
     setSawLv(0);
     setStoLv(0);
@@ -235,6 +236,30 @@ export function useSteelGame() {
     });
   }, []);
 
+  const executeCut = useCallback(
+    (barId, accuracyMult = 1) => {
+      const bar = bars.find((b) => b.id === barId);
+      if (!bar) return;
+      const ba = asgn[barId] || [];
+      const uncut = ba.filter((a) => !a.debited);
+      if (uncut.length === 0) return;
+      const baseFee = Math.round(uncut.length * SAWS[sawLv].cutCost);
+      const fee = Math.round(baseFee * accuracyMult);
+      setAsgn((p) => ({ ...p, [barId]: ba.map((a) => ({ ...a, debited: true })) }));
+      setCutsToday((c) => c + uncut.length);
+      if (fee > 0) setMoney((m) => m - fee);
+      setMiniGame(null);
+      if (accuracyMult < 1) {
+        notify("✂ Parfait ! " + uncut.length + " débitée(s)" + (fee > 0 ? " -" + fee + "€" : ""), "success");
+      } else if (accuracyMult > 1) {
+        notify("✂ Raté… " + uncut.length + " débitée(s)" + (fee > 0 ? " -" + fee + "€" : ""), "error");
+      } else {
+        notify("✂ " + uncut.length + " débitée(s)" + (fee > 0 ? " -" + fee + "€" : ""), "success");
+      }
+    },
+    [bars, asgn, sawLv, notify],
+  );
+
   const debitBar = useCallback(
     (barId) => {
       const bar = bars.find((b) => b.id === barId);
@@ -247,12 +272,15 @@ export function useSteelGame() {
         return;
       }
       const fee = Math.round(uncut.length * SAWS[sawLv].cutCost);
-      setAsgn((p) => ({ ...p, [barId]: ba.map((a) => ({ ...a, debited: true })) }));
-      setCutsToday((c) => c + uncut.length);
-      if (fee > 0) setMoney((m) => m - fee);
-      notify("✂ " + uncut.length + " débitée(s)" + (fee > 0 ? " -" + fee + "€" : ""), "success");
+      // Scie CNC : coupe automatique sans mini-jeu
+      if (sawLv === 3) {
+        executeCut(barId, 1);
+        return;
+      }
+      // Autres scies : ouvre le mini-jeu de découpe
+      setMiniGame({ barId, numCuts: uncut.length, fee });
     },
-    [bars, asgn, cutsToday, sawLv, notify],
+    [bars, asgn, cutsToday, sawLv, notify, executeCut],
   );
 
   const shipOrder = useCallback(
@@ -545,6 +573,9 @@ export function useSteelGame() {
     declineOrder,
     removeAssign,
     debitBar,
+    executeCut,
+    miniGame,
+    setMiniGame,
     shipOrder,
     doWeld,
     endDay,

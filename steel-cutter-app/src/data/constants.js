@@ -13,7 +13,7 @@ export const SCRAP_VALUE_RATIO = 0.14;
 export const SCRAP_REMNANT_MULT = 1.12;
 
 /** Multiplicateur de récompense de commande (base plus basse qu’en 0.1) */
-export const REWARD_BASE = 0.034;
+export const REWARD_BASE = 0.042;
 export const REWARD_PER_REP = 0.0009;
 export const REWARD_RAND = 0.007;
 export const URGENT_REWARD_MULT = 1.28;

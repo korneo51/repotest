@@ -33,9 +33,21 @@ db.exec(`
   );
 `);
 
+try {
+  db.exec(`ALTER TABLE players ADD COLUMN password_hash TEXT`);
+} catch (e) {
+  if (!String(e.message).includes("duplicate column name")) throw e;
+}
+
 const stmts = {
   getByPseudo: db.prepare("SELECT * FROM players WHERE pseudo = ? COLLATE NOCASE"),
-  insertPlayer: db.prepare("INSERT INTO players (id, pseudo) VALUES (?, ?)"),
+  getById: db.prepare("SELECT id, pseudo, password_hash FROM players WHERE id = ?"),
+  insertPlayer: db.prepare(
+    "INSERT INTO players (id, pseudo, password_hash) VALUES (?, ?, ?)"
+  ),
+  setPasswordHash: db.prepare(
+    "UPDATE players SET password_hash = ? WHERE id = ? AND password_hash IS NULL"
+  ),
   hasSave: db.prepare("SELECT 1 FROM saves WHERE player_id = ?"),
   getSave: db.prepare("SELECT save_data FROM saves WHERE player_id = ?"),
   upsertSave: db.prepare(`

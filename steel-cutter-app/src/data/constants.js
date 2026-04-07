@@ -2,7 +2,7 @@ export const MAX_BAR = 6000;
 export const WELD_COST = 18000;
 export const WELD_LOSS = 25;
 
-export const GAME_VERSION = "0.2";
+export const GAME_VERSION = "0.3";
 
 /**
  * Part du « prix matière neuf » (€/kg du profilé) reprise à la ferraille.
@@ -26,3 +26,7 @@ export const URGENT_REP_LOSS_PENDING = 3;
 export const URGENT_REP_LOSS_ACCEPTED = 4;
 /** Jours fictifs pour les urgentes (expiration gérée par expiresAt) */
 export const URGENT_DAYS_PLACEHOLDER = 999;
+
+/** Achat magasin à crédit : règlement N jours après l’achat, majoration (ex. 0.1 = +10 %) */
+export const DEFERRED_PAYMENT_DELAY_DAYS = 2;
+export const DEFERRED_PAYMENT_SURCHARGE = 0.1;

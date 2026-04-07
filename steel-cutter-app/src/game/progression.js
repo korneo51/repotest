@@ -1,18 +1,20 @@
 import { CATS, PM, PROFILES } from "../data/profiles.js";
 
-export function isProfileUnlocked(profileId, rep) {
+export function isProfileUnlocked(profileId, day) {
   const p = PM[profileId];
   if (!p) return false;
-  return rep >= (p.minRep ?? 0);
+  const d = Number(day) || 1;
+  return d >= (p.minDay ?? 1);
 }
 
-/** Profilés achetables / utilisables en commande à cette réputation */
-export function getUnlockedProfiles(rep) {
-  return PROFILES.filter((p) => rep >= (p.minRep ?? 0));
+/** Profilés disponibles à ce jour (achat + commandes) */
+export function getUnlockedProfiles(day) {
+  const d = Number(day) || 1;
+  return PROFILES.filter((p) => d >= (p.minDay ?? 1));
 }
 
 /** Catégories qui ont au moins un profilé débloqué */
-export function getUnlockedCategories(rep) {
-  const unlocked = new Set(getUnlockedProfiles(rep).map((p) => p.cat));
+export function getUnlockedCategories(day) {
+  const unlocked = new Set(getUnlockedProfiles(day).map((p) => p.cat));
   return CATS.filter((c) => unlocked.has(c));
 }

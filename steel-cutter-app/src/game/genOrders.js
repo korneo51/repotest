@@ -27,7 +27,7 @@ export function genOrders(day, rep, ch) {
     for (let i = 0; i < Math.min(cnt, 3); i++) pool.push(cl);
   });
 
-  let unlocked = getUnlockedProfiles(rep);
+  let unlocked = getUnlockedProfiles(day);
   if (unlocked.length === 0) unlocked = [PROFILES[0]];
 
   return Array.from({ length: n }, (_, i) => {

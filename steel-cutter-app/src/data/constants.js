@@ -2,7 +2,7 @@ export const MAX_BAR = 6000;
 export const WELD_COST = 18000;
 export const WELD_LOSS = 25;
 
-export const GAME_VERSION = "0.2";
+export const GAME_VERSION = "0.3";
 
 /**
  * Part du « prix matière neuf » (€/kg du profilé) reprise à la ferraille.

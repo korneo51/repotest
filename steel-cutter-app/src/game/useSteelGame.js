@@ -14,19 +14,21 @@ import { genOrders } from "./genOrders.js";
 import { uid } from "./ids.js";
 import { buyPriceRounded, scrapValueRounded } from "./pricing.js";
 import { isProfileUnlocked } from "./progression.js";
-import { uploadSave } from "../lib/api.js";
+import {
+  uploadSave,
+  getStoredSession,
+  setStoredSession,
+  clearStoredSession,
+  fetchAuthMe,
+} from "../lib/api.js";
 
 export function useSteelGame() {
-  // Récupère la session persistée (localStorage) au démarrage
-  const [player, setPlayerState] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sc_player")) || null; }
-    catch { return null; }
+  const [player, setPlayerState] = useState(() => getStoredSession()?.player ?? null);
+  const [remoteSave, setRemoteSave] = useState(() => {
+    const p = getStoredSession()?.player;
+    return p?.hasSave ? p : null;
   });
-  // Sauvegarde distante chargée au login (hasSave + données si déjà joueur)
-  const [remoteSave, setRemoteSave] = useState(null);
-  const [scr, setScr] = useState(() =>
-    localStorage.getItem("sc_player") ? "menu" : "login"
-  );
+  const [scr, setScr] = useState(() => (getStoredSession()?.token ? "menu" : "login"));
   const [day, setDay] = useState(1);
   const [money, setMoney] = useState(800);
   const [rep, setRep] = useState(0);
@@ -79,6 +81,31 @@ export function useSteelGame() {
     tRef.current = setTimeout(() => setToast(null), 2800);
   }, []);
 
+  useEffect(() => {
+    const s = getStoredSession();
+    if (!s?.token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await fetchAuthMe();
+        if (cancelled) return;
+        setPlayerState(me);
+        setStoredSession({ token: s.token, player: me });
+        setRemoteSave(me.hasSave ? me : null);
+        setScr("menu");
+      } catch {
+        if (cancelled) return;
+        clearStoredSession();
+        setPlayerState(null);
+        setRemoteSave(null);
+        setScr("login");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /** Appelé après un login réussi : stocke le joueur et avance vers le menu */
   const setPlayer = useCallback((playerObj) => {
     setPlayerState(playerObj);
@@ -109,7 +136,7 @@ export function useSteelGame() {
 
   /** Déconnecte le joueur et revient à l'écran de login */
   const logout = useCallback(() => {
-    localStorage.removeItem("sc_player");
+    clearStoredSession();
     setPlayerState(null);
     setRemoteSave(null);
     setScr("login");
@@ -170,7 +197,10 @@ export function useSteelGame() {
 
   const buyBar = useCallback(
     (profId, len) => {
-      if (!isProfileUnlocked(profId, rep)) return notify("Profilé verrouillé — gagnez des ★", "error");
+      if (!isProfileUnlocked(profId, day)) {
+        const need = PM[profId]?.minDay ?? "?";
+        return notify(`Profilé verrouillé — disponible à partir du jour ${need}`, "error");
+      }
       const price = getPrice(profId, len);
       if (money < price) return notify("Pas assez d'argent !", "error");
       if (bars.length >= maxB) return notify("Stockage plein !", "error");
@@ -180,7 +210,7 @@ export function useSteelGame() {
       setMoney((m) => m - price);
       notify(PM[profId].label + " " + len + "mm — " + price + "€");
     },
-    [money, bars.length, maxB, rep, getPrice, notify],
+    [money, bars.length, maxB, day, getPrice, notify],
   );
 
   const scrapBar = useCallback(
@@ -450,7 +480,7 @@ export function useSteelGame() {
     if (scr !== "play" || !player || day <= 1 || day === prevDayRef.current) return;
     prevDayRef.current = day;
     const s = saveStateRef.current;
-    uploadSave(player.id, s, { rep: s.rep, day: s.day, money: s.money, pseudo: player.pseudo }).catch(() => {});
+    uploadSave(s, { rep: s.rep, day: s.day, money: s.money, pseudo: player.pseudo }).catch(() => {});
   }, [day, scr, player]);
 
   useEffect(() => {

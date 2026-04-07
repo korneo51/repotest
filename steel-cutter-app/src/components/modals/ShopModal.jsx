@@ -6,24 +6,24 @@ import { tap } from "../../theme/ui.js";
 import ProfileIcon from "../ProfileIcon.jsx";
 
 export default function ShopModal({ g }) {
-  const { disc, shopCat, setShopCat, shopProf, setShopProf, getPrice, money, bars, maxB, buyBar, rep, isProfileUnlocked } = g;
+  const { disc, shopCat, setShopCat, shopProf, setShopProf, getPrice, money, bars, maxB, buyBar, day, isProfileUnlocked } = g;
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: 3, color: C.gold, marginBottom: 6, textAlign: "center" }}>
         MAGASIN {disc > 0 && <span style={{ fontSize: 12, color: C.purple }}>(-{disc}%)</span>}
       </div>
       <div style={{ fontSize: 11, color: C.dim, textAlign: "center", marginBottom: 8 }}>
-        Profilés débloqués avec la réputation ★
+        Nouveaux profilés et familles au fil des jours (jour actuel : {day})
       </div>
       <div style={{ display: "flex", gap: 4, marginBottom: 8, overflowX: "auto" }}>
         {CATS.map((cat) => {
-          const hasAny = PROFILES.some((p) => p.cat === cat && isProfileUnlocked(p.id, rep));
+          const hasAny = PROFILES.some((p) => p.cat === cat && isProfileUnlocked(p.id, day));
           return (
             <button
               key={cat}
               onClick={() => {
                 setShopCat(cat);
-                const firstOk = PROFILES.find((p) => p.cat === cat && isProfileUnlocked(p.id, rep));
+                const firstOk = PROFILES.find((p) => p.cat === cat && isProfileUnlocked(p.id, day));
                 setShopProf(firstOk?.id || PROFILES.find((p) => p.cat === cat)?.id || shopProf);
               }}
               style={{
@@ -53,7 +53,7 @@ export default function ShopModal({ g }) {
       </div>
       <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
         {PROFILES.filter((p) => p.cat === shopCat).map((p) => {
-          const ok = isProfileUnlocked(p.id, rep);
+          const ok = isProfileUnlocked(p.id, day);
           return (
             <button
               key={p.id}
@@ -74,7 +74,7 @@ export default function ShopModal({ g }) {
               }}
             >
               {p.label}
-              {!ok && <span style={{ fontSize: 9, marginLeft: 4 }}>★{p.minRep}</span>}
+              {!ok && <span style={{ fontSize: 9, marginLeft: 4 }}>J{p.minDay}</span>}
             </button>
           );
         })}
@@ -83,7 +83,7 @@ export default function ShopModal({ g }) {
         {LENGTHS.map((l) => {
           const price = getPrice(shopProf, l.l);
           const full = listPriceRounded(shopProf, l.l);
-          const profOk = isProfileUnlocked(shopProf, rep);
+          const profOk = isProfileUnlocked(shopProf, day);
           const cant = !profOk || money < price || bars.length >= maxB;
           return (
             <button

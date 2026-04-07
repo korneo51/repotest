@@ -16,7 +16,7 @@ export default function MenuScreen({ g }) {
     setResuming(true);
     setResumeError("");
     try {
-      const { saveData } = await apiLoadSave(player.id);
+      const { saveData } = await apiLoadSave();
       loadSave(saveData);
     } catch (e) {
       setResumeError("Impossible de charger la sauvegarde");

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  DEFERRED_PAYMENT_DELAY_DAYS,
+  DEFERRED_PAYMENT_SURCHARGE,
   GAME_VERSION,
   URGENT_REP_LOSS_ACCEPTED,
   URGENT_REP_LOSS_PENDING,
@@ -56,6 +58,7 @@ export function useSteelGame() {
   const [weldSel, setWeldSel] = useState([]);
   const [cheatAmt, setCheatAmt] = useState("");
   const [miniGame, setMiniGame] = useState(null); // { barId, numCuts, fee }
+  const [deferredDebts, setDeferredDebts] = useState([]); // { id, amount, dueDay }
   const [now, setNow] = useState(() => Date.now());
 
   const barElRefs = useRef({});
@@ -67,7 +70,21 @@ export function useSteelGame() {
   const saveStateRef = useRef({});
 
   ordersRef.current = orders;
-  saveStateRef.current = { day, money, rep, sawLv, stoLv, supLv, hasWelder, bars, asgn, orders, clientH, cutsToday };
+  saveStateRef.current = {
+    day,
+    money,
+    rep,
+    sawLv,
+    stoLv,
+    supLv,
+    hasWelder,
+    bars,
+    asgn,
+    orders,
+    clientH,
+    cutsToday,
+    deferredDebts,
+  };
 
   const sw = SAWS[sawLv].w;
   const maxB = STOS[stoLv].m;
@@ -128,6 +145,7 @@ export function useSteelGame() {
     setOrders(saveData.orders ?? []);
     setClientH(saveData.clientH ?? {});
     setCutsToday(saveData.cutsToday ?? 0);
+    setDeferredDebts(Array.isArray(saveData.deferredDebts) ? saveData.deferredDebts : []);
     setCollapsed({});
     setWeldSel([]);
     setModal(null);
@@ -155,6 +173,7 @@ export function useSteelGame() {
     setDayLog([]);
     setClientH({});
     setCutsToday(0);
+    setDeferredDebts([]);
     setOrders(genOrders(1, 0, {}));
     setScr("play");
     setModal(null);
@@ -193,24 +212,49 @@ export function useSteelGame() {
 
   const getPrice = useCallback((profId, len) => buyPriceRounded(profId, len, disc), [disc]);
 
+  /** Montant à régler en différé (+10 %), arrondi entier € */
+  const getDeferredCharge = useCallback(
+    (profId, len) => Math.ceil(getPrice(profId, len) * (1 + DEFERRED_PAYMENT_SURCHARGE)),
+    [getPrice],
+  );
+
   const getScrapVal = useCallback((bar) => scrapValueRounded(bar), []);
 
   const buyBar = useCallback(
-    (profId, len) => {
+    (profId, len, opts = {}) => {
+      const deferred = opts.deferred === true;
       if (!isProfileUnlocked(profId, day)) {
         const need = PM[profId]?.minDay ?? "?";
         return notify(`Profilé verrouillé — disponible à partir du jour ${need}`, "error");
       }
-      const price = getPrice(profId, len);
-      if (money < price) return notify("Pas assez d'argent !", "error");
       if (bars.length >= maxB) return notify("Stockage plein !", "error");
+      const price = getPrice(profId, len);
+      const charge = deferred ? getDeferredCharge(profId, len) : price;
+
+      if (deferred) {
+        if (money >= price) {
+          return notify("Tu as assez d’argent pour payer comptant.", "error");
+        }
+        const dueDay = day + DEFERRED_PAYMENT_DELAY_DAYS;
+        const b = { id: uid(), remaining: len, originalLength: len, profileId: profId, isRemnant: false };
+        setBars((p) => [...p, b]);
+        setAsgn((p) => ({ ...p, [b.id]: [] }));
+        setDeferredDebts((d) => [...d, { id: uid(), amount: charge, dueDay }]);
+        notify(
+          PM[profId].label + " " + len + "mm — crédit " + charge + "€ (règlement J" + dueDay + ", +" + Math.round(DEFERRED_PAYMENT_SURCHARGE * 100) + "%)",
+          "info",
+        );
+        return;
+      }
+
+      if (money < price) return notify("Pas assez d’argent — ou achat différé J+" + DEFERRED_PAYMENT_DELAY_DAYS + " (+10 %).", "error");
       const b = { id: uid(), remaining: len, originalLength: len, profileId: profId, isRemnant: false };
       setBars((p) => [...p, b]);
       setAsgn((p) => ({ ...p, [b.id]: [] }));
       setMoney((m) => m - price);
       notify(PM[profId].label + " " + len + "mm — " + price + "€");
     },
-    [money, bars.length, maxB, day, getPrice, notify],
+    [money, bars.length, maxB, day, getPrice, getDeferredCharge, notify],
   );
 
   const scrapBar = useCallback(
@@ -465,14 +509,25 @@ export function useSteelGame() {
 
     if (repHit > 0) setRep((r) => Math.max(0, r - repHit));
 
+    const nd = day + 1;
+    const debtsDue = deferredDebts.filter((d) => d.dueDay <= nd);
+    const payTotal = debtsDue.reduce((s, d) => s + d.amount, 0);
+    if (payTotal > 0) {
+      setMoney((m) => m - payTotal);
+      log.push({
+        t: "📋 Règlement différé (magasin) : -" + payTotal + "€",
+        ty: "warn",
+      });
+    }
+    setDeferredDebts((d) => d.filter((x) => x.dueDay > nd));
+
     setAsgn(na);
     setCutsToday(0);
-    const nd = day + 1;
     setOrders([...remaining, ...genOrders(nd, rep, clientH)]);
     setDay(nd);
     setDayLog(log);
     if (log.length > 0) setModal("summary");
-  }, [asgn, orders, sawLv, stoLv, day, rep, clientH]);
+  }, [asgn, orders, sawLv, stoLv, day, rep, clientH, deferredDebts]);
 
   // Autosave : déclenché chaque fois que le jour avance (après endDay)
   const prevDayRef = useRef(0);
@@ -659,7 +714,9 @@ export function useSteelGame() {
     isReady,
     isPlanned,
     getPrice,
+    getDeferredCharge,
     getScrapVal,
+    deferredDebts,
     buyBar,
     scrapBar,
     acceptOrder,

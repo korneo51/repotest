@@ -24,7 +24,7 @@ $SSH "chmod 755 ${WEB_DIR} ${WEB_DIR}/assets 2>/dev/null || true; find ${WEB_DIR
 
 echo "==> Envoi de l'API…"
 $SSH "mkdir -p ${APP_DIR}/api ${APP_DIR}/data"
-rsync -av --delete ../api/ "root@${LXC_IP}:${APP_DIR}/api/"
+rsync -av --delete --exclude node_modules ../api/ "root@${LXC_IP}:${APP_DIR}/api/"
 
 echo "==> Installation des dépendances Node.js…"
 $SSH "cd ${APP_DIR}/api && npm install --omit=dev"
